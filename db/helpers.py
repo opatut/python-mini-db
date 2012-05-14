@@ -14,6 +14,7 @@ class FieldSetter(FieldHelper):
         obj._values[self.field] = value
 class FieldGetter(FieldHelper):
     def __call__(self, obj):
+        if not self.field in obj._values: return None
         return obj._values[self.field]
 class FieldDeleter(FieldHelper):
     def __call__(self, obj):
@@ -28,5 +29,6 @@ class RelationSetter(RelationHelper):
         obj._values[self.field] = getattr(value, self.model._primary.name) # set primary key in field
 class RelationGetter(RelationHelper):
     def __call__(self, obj):
+        if not self.field in obj._values: return None
         return self.model.get(obj._values[self.field]) # return object with primary key
 

@@ -1,5 +1,7 @@
-
 modelcache = {} # name->cache
+
+def clearCache():
+    modelcache = {}
 
 class Cache(object):
     """Stores instances of models by their primary key."""

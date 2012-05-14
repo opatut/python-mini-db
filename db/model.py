@@ -1,9 +1,19 @@
-from cache import *
-from field import *
-from helpers import *
-from sql import *
+from db.cache import *
+from db.field import *
+from db.helpers import *
+from db.sql import *
+
+from sqlalchemy.exc import OperationalError
 
 models = {} # name->class
+
+def destroyTables():
+    for model in models:
+        models[model].destroyTable()
+
+def createTables():
+    for model in models:
+        models[model].createTable()
 
 class Model(object):
     _fields = []
@@ -27,22 +37,23 @@ class Model(object):
         if cache.has(key):
             return cache.get(key)
 
-        return model.select("WHERE %s = :key LIMIT 1" % model._primary.name, key = key)[0]
+        r = model.select("WHERE %s = :key LIMIT 1" % model._primary.name, key = key)
+        return r[0] if r else None
 
     @classmethod
-    def select(model, options = "", **kwargs):
+    def select(model, options = "", *args, **kwargs):
         cache = modelcache[model.__name__]
         sql = "SELECT * FROM %s" % model._table
         if options:
             sql += " " + options
-        result = Query(sql).run(kwargs)
+        result = Query(sql).run(*args, **kwargs)
         models = []
         for row in result:
             m = model()
-            for k in result.keys():
-                m._values[k] = result[k]
+            for k, v in row.items():
+                m._values[k] = v
             cache.set(m)
-            models.append[m]
+            models.append(m)
         return models
 
 
@@ -68,7 +79,7 @@ class Model(object):
         result = Query(sql).run(**self._values)
 
         if not self._primary.name in self._values:
-            print "Result",result.keys()
+            self._values[self._primary.name] = result.lastrowid
 
     @classmethod
     def createTable(model):
@@ -80,6 +91,12 @@ class Model(object):
         sql += ");"
 
         Query(sql).run()
+
+    @classmethod
+    def destroyTable(model):
+        sql = "DROP TABLE %s" % model._table
+        try: Query(sql).run()
+        except OperationalError: pass # table not found
 
 
 def registerModel(cls):
